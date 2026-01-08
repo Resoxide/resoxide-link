@@ -1,0 +1,24 @@
+[package]
+name = "resoxide-link"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+defaults = ["glam"]
+glam = ["dep:glam"]
+
+[dependencies]
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+serde = { version = "1", features = ["derive"] }
+rust_decimal = { version = "1.39.0", features = ["serde_json", "serde-arbitrary-precision"] }
+glam = { version = "0.30.10", optional = true }
+
+[dev-dependencies]
+tungstenite = { version = "0.28.0", features = ["handshake"] }
+
+[build-dependencies]
+syn = "2"
+quote = "1"
+prettyplease = "0.2.37"
+stringcase = "0.4.0"
+proc-macro2 = "1"
