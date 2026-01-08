@@ -6,14 +6,14 @@ use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use rust_decimal::Decimal;
 use serde::de::Error;
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Default,Debug,Serialize,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Reference {
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub id: String,
-    pub target_id: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub target_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub target_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_type: Option<String>,
 }
 
 impl From<Reference> for Member {
@@ -206,8 +206,8 @@ pub struct Component {
     pub is_reference_only: bool,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub component_type: String,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub members: HashMap<String, Member>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub members: Option<HashMap<String, Member>>,
 }
 
 impl Component {
@@ -216,12 +216,15 @@ impl Component {
             id: "".to_string(),
             is_reference_only: false,
             component_type,
-            members: HashMap::new(),
+            members: None,
         }
     }
 
     pub fn with_member(mut self, name: String, member: Member) -> Self {
-        self.members.insert(name, member);
+        if matches!(self.members, None) {
+            self.members = Some(HashMap::new());
+        }
+        self.members.as_mut().unwrap().insert(name, member);
         self
     }
 }
@@ -255,22 +258,22 @@ pub struct Slot {
     pub name: FieldString,
     #[serde(serialize_with = "serialize_as_member")]
     pub tag: FieldString,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub components: Vec<Component>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub children: Vec<Slot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<Component>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub children: Option<Vec<Slot>>,
 }
 
 impl Slot {
     pub const ROOT_SLOT_ID: &'static str = "Root";
-    pub const TYPE_NAME: &'static str = "[FrooxEngine]FrooxEngine.Slot";
+    pub const TYPE_NAME: &'static str = "FrooxEngine.Slot";
 
     pub fn new(parent: &str, name: String) -> Self {
         Self {
             parent: Reference {
-                id: "".to_string(),
-                target_id: parent.to_string(),
-                target_type: Self::TYPE_NAME.to_string(),
+                id: None,
+                target_id: Some(parent.to_string()),
+                target_type: Some(Self::TYPE_NAME.to_string()),
             },
             name: FieldString {
                 id: "".to_string(),
@@ -301,15 +304,18 @@ impl Slot {
     }
 
     pub fn add_component(&mut self, component: Component) {
-        self.components.push(component);
+        if matches!(self.components, None) {
+            self.components = Some(vec![]);
+        }
+        self.components.as_mut().unwrap().push(component);
     }
 
     pub fn add_child(&mut self, name: String) -> Self {
         Self {
             parent: Reference {
-                id: "".to_string(),
-                target_id: self.id.to_string(),
-                target_type: "[FrooxEngine]Slot".to_string(),
+                id: None,
+                target_id: Some(self.id.to_string()),
+                target_type: Some("Slot".to_string()),
             },
             name: FieldString {
                 id: "".to_string(),
@@ -326,9 +332,9 @@ impl Default for Slot {
             id: "".to_string(),
             is_reference_only: false,
             parent: Reference {
-                id: "".to_string(),
-                target_id: "".to_string(),
-                target_type: "".to_string(),
+                id: None,
+                target_id: None,
+                target_type: None,
             },
             position: FieldFloat3 {
                 id: "".to_string(),
@@ -358,8 +364,8 @@ impl Default for Slot {
                 id: "".to_string(),
                 value: None,
             },
-            components: vec![],
-            children: vec![],
+            components: None,
+            children: None,
         }
     }
 }

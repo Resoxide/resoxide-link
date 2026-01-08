@@ -8,9 +8,9 @@ defaults = ["glam"]
 glam = ["dep:glam"]
 
 [dependencies]
-serde_json = { version = "1", features = ["arbitrary_precision"] }
+serde_json = { version = "1", features = [] }
 serde = { version = "1", features = ["derive"] }
-rust_decimal = { version = "1.39.0", features = ["serde_json", "serde-arbitrary-precision"] }
+rust_decimal = { version = "1.39.0", features = ["serde_json"] }
 glam = { version = "0.30.10", optional = true }
 
 [dev-dependencies]

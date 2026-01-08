@@ -56,7 +56,7 @@ impl From<Slot> for AddSlotData {
     fn from(value: Slot) -> Self {
         Self {
             id: value.id,
-            parent: if value.parent.target_id.is_empty() { None } else { Some(value.parent) },
+            parent: Some(value.parent),
             position: if value.position.value == Default::default() { None } else { Some(value.position) },
             rotation: if value.rotation.value == Default::default() { None } else { Some(value.rotation) },
             scale: if value.scale.value == Float3::ONES { None } else { Some(value.scale) },
