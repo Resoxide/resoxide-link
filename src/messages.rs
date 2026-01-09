@@ -1,19 +1,8 @@
-use crate::data_model::{FieldBool, FieldFloat3, FieldFloatQ, FieldString, Float3, Member, MemberRef, Reference, Slot};
-use serde::{Deserialize, Serialize, Serializer};
+use crate::data_model::{FieldBool, FieldFloat3, FieldFloatQ, FieldString, Float3, Member, Reference, Slot};
 use std::collections::HashMap;
+use resoxide_json::Json;
 
-fn serialize_as_opt_member<'a,S,T>(value: &'a Option<T>, s: S) -> Result<S::Ok, S::Error>
-where MemberRef<'a>: From<&'a T>, S: Serializer
-{
-    if let Some(v) = value {
-        s.serialize_some(&MemberRef::from(v))
-    } else {
-        s.serialize_none()
-    }
-}
-
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct GetSlot {
     pub message_id: String,
     pub slot_id: String,
@@ -21,34 +10,16 @@ pub struct GetSlot {
     pub include_component_data: bool,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct AddSlotData {
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
+    pub id: Option<String>,
     pub parent: Option<Reference>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub position: Option<FieldFloat3>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub rotation: Option<FieldFloatQ>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub scale: Option<FieldFloat3>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub is_active: Option<FieldBool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub is_persistent: Option<FieldBool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub name: Option<FieldString>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub tag: Option<FieldString>,
 }
 
@@ -68,105 +39,76 @@ impl From<Slot> for AddSlotData {
     }
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct AddSlot {
     pub message_id: String,
     pub data: AddSlotData,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct UpdateSlotData {
     pub id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub parent: Option<Reference>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub position: Option<FieldFloat3>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub rotation: Option<FieldFloatQ>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub scale: Option<FieldFloat3>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub is_active: Option<FieldBool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub is_persistent: Option<FieldBool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub name: Option<FieldString>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(serialize_with = "serialize_as_opt_member")]
     pub tag: Option<FieldString>,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct UpdateSlot {
     pub message_id: String,
-    pub data: Slot,
+    pub data: UpdateSlotData,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct RemoveSlot {
     pub message_id: String,
     pub slot_id: String,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct GetComponent {
     pub message_id: String,
     pub component_id: String,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct AddComponentData {
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub id: String,
+    pub id: Option<String>,
     pub component_type: String,
     pub members: HashMap<String,Member>,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct AddComponent {
     pub message_id: String,
     pub container_slot_id: String,
     pub data: AddComponentData,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct UpdateComponentData {
     pub id: String,
     pub members: HashMap<String,Member>,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct UpdateComponent {
     pub message_id: String,
     pub data: UpdateComponentData,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct RemoveComponent {
     pub message_id: String,
     pub component_id: String,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(tag = "$type")]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Json)]
 pub enum Message {
     GetSlot(GetSlot),
     AddSlot(AddSlot),

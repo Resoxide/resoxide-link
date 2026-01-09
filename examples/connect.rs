@@ -1,38 +1,77 @@
+use std::fmt::format;
 use std::thread::scope;
-use serde::Serialize;
-use tungstenite::connect;
+use tungstenite::{connect, Utf8Bytes};
 use resoxide_link::data_model::Slot;
-use resoxide_link::messages::{GetSlot, Message};
+use resoxide_link::messages::{GetComponent, GetSlot, Message};
 use resoxide_link::responses::Response;
+use resoxide_json::{Json, Token};
 
-fn prettify(bytes: &[u8]) -> String {
-    let obj: serde_json::Value = serde_json::from_slice(bytes).unwrap();
-    serde_json::to_string_pretty(&obj).unwrap()
+fn message(msg: &Message) -> tungstenite::Message {
+    tungstenite::Message::Text(
+    msg.to_token().expect("Token").serialize().expect("Serialize").as_str().into()
+    )
+}
+
+fn read_response(msg: &tungstenite::Message) -> Response {
+    Response::from_token(&Token::deserialize_str(&msg.to_text().unwrap()).unwrap()).unwrap()
 }
 
 fn main() {
+    let mut counter = 0;
+    let mut get_id = move || {
+        counter += 1;
+        format!("MyID{counter:x}")
+    };
 
     scope(move |scope| {
-        let (mut socket, response) = connect("ws://localhost:61587").expect("Can't connect");
+        let (mut socket, response) = connect("ws://localhost:38916").expect("Can't connect");
 
-        let message = Message::GetSlot(GetSlot {
-            message_id: "MyID00".to_string(),
+        let msg = Message::GetSlot(GetSlot {
+            message_id: get_id(),
             slot_id: Slot::ROOT_SLOT_ID.to_string(),
-            depth: -1,
-            include_component_data: true,
+            depth: 0,
+            include_component_data: false,
         });
 
-        socket.write(tungstenite::Message::Text(serde_json::to_string(&message).expect("Cannot encode message").into())).expect("Cannot send message");
+        let message_json = msg.to_token().expect("Can't serialize message")
+            .serialize().expect("Can't serialize message");
+
+        socket.write(tungstenite::Message::Text(message_json.as_str().into())).expect("Cannot send message");
         socket.flush().expect("Cannot flush socket");
 
         let msg = socket.read().expect("Can't read message");
 
+        let mut components = vec![];
+
         match msg {
             tungstenite::Message::Text(text) => {
-                let response: Response = serde_json::from_slice(text.as_bytes()).expect("Cannot deserialize response");
+                println!("{}", text);
+                let token = Token::deserialize_str(text.as_str()).expect("Can't deserialize json");
+                //println!("{:#?}", token);
+                let response = Response::from_token(&token).expect("Cannot deserialize response");
                 println!("decoded response: {:#?}", response);
+                let Response::SlotData(slot) = response else { panic!("Response isn't slot"); };
+                for component in slot.data.components.expect("Components").iter() {
+                    components.push(component.id.as_ref().expect("ID").clone());
+                }
+                for child in slot.data.children.as_ref().expect("Children").iter() {
+                    if let Some(child_components) = &child.components {
+                        for component in child_components.iter() {
+                            components.push(component.id.as_ref().expect("ID").clone());
+                        }
+                    }
+                }
             }
             _ => ()
+        }
+
+        for id in &components {
+            socket.write(message(&Message::GetComponent(GetComponent { message_id: get_id(), component_id: id.clone() }))).expect("Can't send message");
+            socket.flush();
+            let r = socket.read().expect("Can't read response");
+            println!("{:?}", r);
+            let response = read_response(&r);
+            println!("{:#?}", response);
         }
 
         let _ = socket.close(None);

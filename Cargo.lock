@@ -438,6 +438,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "resoxide-json"
+version = "0.1.0"
+source = "git+https://github.com/Resoxide/resoxide-json.git?rev=fd64c9b#fd64c9bcd47a153ce3c9a09098b6796679cefa62"
+dependencies = [
+ "resoxide-json-procmacro",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "resoxide-json-procmacro"
+version = "0.1.0"
+source = "git+https://github.com/Resoxide/resoxide-json.git?rev=fd64c9b#fd64c9bcd47a153ce3c9a09098b6796679cefa62"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "stringcase",
+ "syn 2.0.114",
+]
+
+[[package]]
 name = "resoxide-link"
 version = "0.1.0"
 dependencies = [
@@ -445,9 +467,8 @@ dependencies = [
  "prettyplease",
  "proc-macro2",
  "quote",
+ "resoxide-json",
  "rust_decimal",
- "serde",
- "serde_json",
  "stringcase",
  "syn 2.0.114",
  "tungstenite",
@@ -517,7 +538,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
- "serde_derive",
 ]
 
 [[package]]

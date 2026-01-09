@@ -1,8 +1,7 @@
-use serde::{Deserialize,Serialize};
 use crate::data_model::{Component, Slot};
+use resoxide_json::Json;
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct SlotData {
     pub source_message_id: String,
     pub success: bool,
@@ -11,24 +10,24 @@ pub struct SlotData {
     pub data: Slot,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
 pub struct ComponentData {
     pub source_message_id: String,
     pub success: bool,
     pub error_info: Option<String>,
-    pub component: Component,
+    pub data: Component,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
-#[serde(tag = "$type")]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug,Default,Json)]
+pub struct ResponseData {
+    source_message_id: String,
+    success: bool,
+    error_info: Option<String>,
+}
+
+#[derive(Debug,Json)]
 pub enum Response {
-    Response {
-        source_message_id: String,
-        success: bool,
-        error_info: Option<String>,
-    },
+    Response(ResponseData),
     SlotData(SlotData),
     ComponentData(ComponentData),
 }

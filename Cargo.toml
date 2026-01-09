@@ -8,10 +8,13 @@ defaults = ["glam"]
 glam = ["dep:glam"]
 
 [dependencies]
-serde_json = { version = "1", features = [] }
-serde = { version = "1", features = ["derive"] }
 rust_decimal = { version = "1.39.0", features = ["serde_json"] }
 glam = { version = "0.30.10", optional = true }
+
+[dependencies.resoxide-json]
+#path = "../resoxide-json"
+git = "https://github.com/Resoxide/resoxide-json.git"
+rev = "fd64c9b"
 
 [dev-dependencies]
 tungstenite = { version = "0.28.0", features = ["handshake"] }

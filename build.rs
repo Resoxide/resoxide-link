@@ -42,7 +42,7 @@ fn matrix(base_type: &str, ty: &str) -> TokenStream {
             }
         }
         tokens.extend(quote! {
-            #[derive(Clone,Copy,Default,Debug,Serialize,Deserialize,PartialEq)]
+            #[derive(Clone,Copy,Default,Json,Debug,PartialEq)]
             #[repr(C)]
             pub struct #matrix_ty {
                 #fields
@@ -148,8 +148,7 @@ fn vector(base_type: &str, ty: &str) -> TokenStream {
             eq.extend(quote! {,Eq,Hash});
         }
         tokens.extend(quote! {
-            #[derive(Clone,Copy,Default,Debug,Serialize,Deserialize,PartialEq #eq)]
-            #[serde(rename_all = "camelCase")]
+            #[derive(Clone,Copy,Default,Json,Debug,PartialEq #eq)]
             #[repr(C)]
             pub struct #vector_ty {
                 #fields
@@ -201,8 +200,7 @@ fn quaternion(base_type: &str, ty: &str) -> TokenStream {
         });
     }
     tokens.extend(quote! {
-        #[derive(Clone,Copy,Debug,Serialize,Deserialize,PartialEq)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Clone,Copy,Debug,Json,PartialEq)]
         #[repr(C)]
         pub struct #quaternion_ty {
             #fields
@@ -229,40 +227,34 @@ fn field(ty_name: &str, ty: &str) -> TokenStream {
     let nullable_field_ty = syn::Ident::new(&*format!("FieldNullable{pascal_name}"), Span::call_site());
 
     quote! {
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Default,Json)]
         pub struct #field_ty {
-            #[serde(skip_serializing_if = "String::is_empty")]
-            pub id: String,
+            pub id: Option<String>,
             pub value: #rust_ty,
         }
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Default,Json)]
         pub struct #array_ty {
-            #[serde(skip_serializing_if = "String::is_empty")]
-            pub id: String,
+            pub id: Option<String>,
             pub values: Vec<#rust_ty>,
         }
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Default,Json)]
         pub struct #nullable_field_ty {
-            #[serde(skip_serializing_if = "String::is_empty")]
-            pub id: String,
+            pub id: Option<String>,
             pub value: Option<#rust_ty>,
         }
         impl From<#rust_ty> for Member {
             fn from(value: #rust_ty) -> Self {
-                Self::#variant(#field_ty { id: "".to_string(), value })
+                Self::#variant(#field_ty { id: None, value })
             }
         }
         impl From<Option<#rust_ty>> for Member {
             fn from(value: Option<#rust_ty>) -> Self {
-                Self::#nullable_variant(#nullable_field_ty { id: "".to_string(), value: value })
+                Self::#nullable_variant(#nullable_field_ty { id: None, value: value })
             }
         }
         impl From<Vec<#rust_ty>> for Member {
             fn from(values: Vec<#rust_ty>) -> Self {
-                Self::#array_ty(#array_ty { id: "".to_string(), values })
+                Self::#array_ty(#array_ty { id: None, values })
             }
         }
     }
@@ -278,11 +270,11 @@ fn variant_nullable(ty_name: &str) -> TokenStream {
     let nullable_discriminator = format!("{ty_name}?");
     let array_discriminator = format!("{ty_name}[]");
     quote! {
-        #[serde(rename = #ty_name)]
+        #[json(rename = #ty_name)]
         #variant(#struct_ty),
-        #[serde(rename = #nullable_discriminator)]
+        #[json(rename = #nullable_discriminator)]
         #nullable_variant(#nullable_struct_ty),
-        #[serde(rename = #array_discriminator)]
+        #[json(rename = #array_discriminator)]
         #array_variant(#array_variant),
     }
 }
@@ -297,11 +289,11 @@ fn ref_variant_nullable(ty_name: &str) -> TokenStream {
     let nullable_discriminator = format!("{ty_name}?");
     let array_discriminator = format!("{ty_name}[]");
     quote! {
-        #[serde(rename = #ty_name)]
+        #[json(rename = #ty_name)]
         #variant(&'a #struct_ty),
-        #[serde(rename = #nullable_discriminator)]
+        #[json(rename = #nullable_discriminator)]
         #nullable_variant(&'a #nullable_struct_ty),
-        #[serde(rename = #array_discriminator)]
+        #[json(rename = #array_discriminator)]
         #array_variant(&'a #array_variant),
     }
 }
@@ -332,24 +324,6 @@ fn impl_from(ty_name: &str, nullable: bool) -> TokenStream {
                     Self::#variant(value)
                 }
             }
-
-            impl<'a> From<&'a #array_ty> for MemberRef<'a> {
-                fn from(value: &'a #array_ty) -> Self {
-                    Self::#array_ty(value)
-                }
-            }
-
-            impl<'a> From<&'a #nullable_field_ty> for MemberRef<'a> {
-                fn from(value: &'a #nullable_field_ty) -> Self {
-                    Self::#nullable_variant(value)
-                }
-            }
-
-            impl<'a> From<&'a #field_ty> for MemberRef<'a> {
-                fn from(value: &'a #field_ty) -> Self {
-                    Self::#variant(value)
-                }
-            }
         }
     } else {
         quote! {
@@ -361,18 +335,6 @@ fn impl_from(ty_name: &str, nullable: bool) -> TokenStream {
 
             impl From<#array_ty> for Member {
                 fn from(value: #array_ty) -> Self {
-                    Self::#array_ty(value)
-                }
-            }
-
-            impl<'a> From<&'a #field_ty> for MemberRef<'a> {
-                fn from(value: &'a #field_ty) -> Self {
-                    Self::#variant(value)
-                }
-            }
-
-            impl<'a> From<&'a #array_ty> for MemberRef<'a> {
-                fn from(value: &'a #array_ty) -> Self {
                     Self::#array_ty(value)
                 }
             }
@@ -462,55 +424,52 @@ fn main() {
     }
 
     type_stream.extend(quote! {
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Default,Json)]
         pub struct FieldString {
-            #[serde(skip_serializing_if = "String::is_empty")]
-            pub id: String,
+            pub id: Option<String>,
             pub value: Option<String>,
         }
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Default,Json)]
         pub struct ArrayString {
-            #[serde(skip_serializing_if = "String::is_empty")]
-            pub id: String,
+            pub id: Option<String>,
+            pub values: Vec<Option<String>>,
+        }
+        #[derive(Debug,Default,Json)]
+        pub struct FieldUri {
+            pub id: Option<String>,
+            pub value: Option<String>,
+        }
+        #[derive(Debug,Default,Json)]
+        pub struct ArrayUri {
+            pub id: Option<String>,
             pub values: Vec<Option<String>>,
         }
     });
 
     variant_stream.extend(quote! {
         String(FieldString),
-        #[serde(rename = "string[]")]
+        #[json(rename = "string[]")]
         ArrayString(ArrayString),
+        #[json(rename = "Uri")]
+        Uri(FieldUri),
+        #[json(rename = "Uri[]")]
+        ArrayUri(ArrayUri),
     });
     ref_variant_stream.extend(quote! {
         String(&'a FieldString),
-        #[serde(rename = "string[]")]
+        #[json(rename = "string[]")]
         ArrayString(&'a ArrayString),
     });
     impl_stream.extend(impl_from("string", false));
 
     type_stream.extend(quote! {
-        #[derive(Debug,Serialize,Deserialize)]
-        #[serde(tag = "$type")]
-        #[serde(rename_all = "camelCase")]
+        #[derive(Debug,Json)]
         pub enum Member {
             Reference(Reference),
             List(SyncList),
             SyncObject(SyncObject),
             Enum(FieldEnum),
             #variant_stream
-        }
-
-        #[derive(Debug,Serialize)]
-        #[serde(tag = "$type")]
-        #[serde(rename_all = "camelCase")]
-        pub enum MemberRef<'a> {
-            Reference(&'a Reference),
-            List(&'a SyncList),
-            SyncObject(&'a SyncObject),
-            Enum(&'a FieldEnum),
-            #ref_variant_stream
         }
 
         #impl_stream
