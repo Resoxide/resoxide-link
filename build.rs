@@ -229,16 +229,19 @@ fn field(ty_name: &str, ty: &str) -> TokenStream {
     quote! {
         #[derive(Debug,Default,Json)]
         pub struct #field_ty {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub value: #rust_ty,
         }
         #[derive(Debug,Default,Json)]
         pub struct #array_ty {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub values: Vec<#rust_ty>,
         }
         #[derive(Debug,Default,Json)]
         pub struct #nullable_field_ty {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub value: Option<#rust_ty>,
         }
@@ -276,25 +279,6 @@ fn variant_nullable(ty_name: &str) -> TokenStream {
         #nullable_variant(#nullable_struct_ty),
         #[json(rename = #array_discriminator)]
         #array_variant(#array_variant),
-    }
-}
-
-fn ref_variant_nullable(ty_name: &str) -> TokenStream {
-    let pascal_name = pascal_case(ty_name);
-    let struct_ty = syn::Ident::new(&*format!("Field{pascal_name}"), Span::call_site());
-    let variant = syn::Ident::new(&*pascal_name, Span::call_site());
-    let nullable_struct_ty = syn::Ident::new(&*format!("FieldNullable{pascal_name}"), Span::call_site());
-    let nullable_variant = syn::Ident::new(&*format!("Nullable{pascal_name}"), Span::call_site());
-    let array_variant = syn::Ident::new(&*format!("Array{pascal_name}"), Span::call_site());
-    let nullable_discriminator = format!("{ty_name}?");
-    let array_discriminator = format!("{ty_name}[]");
-    quote! {
-        #[json(rename = #ty_name)]
-        #variant(&'a #struct_ty),
-        #[json(rename = #nullable_discriminator)]
-        #nullable_variant(&'a #nullable_struct_ty),
-        #[json(rename = #array_discriminator)]
-        #array_variant(&'a #array_variant),
     }
 }
 
@@ -385,12 +369,10 @@ fn main() {
 
     let mut type_stream = TokenStream::new();
     let mut variant_stream = TokenStream::new();
-    let mut ref_variant_stream = TokenStream::new();
     let mut impl_stream = TokenStream::new();
     for &(name, ty) in types.iter() {
         type_stream.extend(field(name, ty));
         variant_stream.extend(variant_nullable(name));
-        ref_variant_stream.extend(ref_variant_nullable(name));
         impl_stream.extend(impl_from(name, true));
         if vector_types.contains(&name) {
             type_stream.extend(vector(name, ty));
@@ -399,7 +381,6 @@ fn main() {
                 let ty_dim = pascal_case(&name_dim);
                 type_stream.extend(field(&name_dim, &ty_dim));
                 variant_stream.extend(variant_nullable(&name_dim));
-                ref_variant_stream.extend(ref_variant_nullable(&name_dim));
                 impl_stream.extend(impl_from(&name_dim, true));
             }
         }
@@ -409,7 +390,6 @@ fn main() {
             let ty_name = pascal_case(&quaternion_name);
             type_stream.extend(field(&quaternion_name,&ty_name));
             variant_stream.extend(variant_nullable(&quaternion_name));
-            ref_variant_stream.extend(ref_variant_nullable(&quaternion_name));
             impl_stream.extend(impl_from(&quaternion_name, true));
             type_stream.extend(matrix(name, ty));
             for dim in 2..=4 {
@@ -417,7 +397,6 @@ fn main() {
                 let ty_dim = pascal_case(&name_dim);
                 type_stream.extend(field(&name_dim, &ty_dim));
                 variant_stream.extend(variant_nullable(&name_dim));
-                ref_variant_stream.extend(ref_variant_nullable(&name_dim));
                 impl_stream.extend(impl_from(&name_dim, true));
             }
         }
@@ -426,21 +405,25 @@ fn main() {
     type_stream.extend(quote! {
         #[derive(Debug,Default,Json)]
         pub struct FieldString {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub value: Option<String>,
         }
         #[derive(Debug,Default,Json)]
         pub struct ArrayString {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub values: Vec<Option<String>>,
         }
         #[derive(Debug,Default,Json)]
         pub struct FieldUri {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub value: Option<String>,
         }
         #[derive(Debug,Default,Json)]
         pub struct ArrayUri {
+            #[json(skip = "Option::is_none")]
             pub id: Option<String>,
             pub values: Vec<Option<String>>,
         }
@@ -454,11 +437,6 @@ fn main() {
         Uri(FieldUri),
         #[json(rename = "Uri[]")]
         ArrayUri(ArrayUri),
-    });
-    ref_variant_stream.extend(quote! {
-        String(&'a FieldString),
-        #[json(rename = "string[]")]
-        ArrayString(&'a ArrayString),
     });
     impl_stream.extend(impl_from("string", false));
 

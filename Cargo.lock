@@ -440,7 +440,7 @@ dependencies = [
 [[package]]
 name = "resoxide-json"
 version = "0.1.0"
-source = "git+https://github.com/Resoxide/resoxide-json.git?rev=fd64c9b#fd64c9bcd47a153ce3c9a09098b6796679cefa62"
+source = "git+https://github.com/Resoxide/resoxide-json.git?rev=990e7cd#990e7cd3c887aaaf5b0bd6c23fb5570b04f3ae20"
 dependencies = [
  "resoxide-json-procmacro",
  "rust_decimal",
@@ -451,7 +451,7 @@ dependencies = [
 [[package]]
 name = "resoxide-json-procmacro"
 version = "0.1.0"
-source = "git+https://github.com/Resoxide/resoxide-json.git?rev=fd64c9b#fd64c9bcd47a153ce3c9a09098b6796679cefa62"
+source = "git+https://github.com/Resoxide/resoxide-json.git?rev=990e7cd#990e7cd3c887aaaf5b0bd6c23fb5570b04f3ae20"
 dependencies = [
  "proc-macro2",
  "quote",

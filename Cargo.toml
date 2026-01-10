@@ -14,7 +14,7 @@ glam = { version = "0.30.10", optional = true }
 [dependencies.resoxide-json]
 #path = "../resoxide-json"
 git = "https://github.com/Resoxide/resoxide-json.git"
-rev = "fd64c9b"
+rev = "990e7cd"
 
 [dev-dependencies]
 tungstenite = { version = "0.28.0", features = ["handshake"] }

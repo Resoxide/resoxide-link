@@ -5,6 +5,7 @@ pub use resoxide_json::{Json, Token, Error as JsonError};
 
 #[derive(Default,Debug,Json)]
 pub struct Reference {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub target_id: Option<String>,
     pub target_type: Option<String>,
@@ -18,6 +19,7 @@ impl From<Reference> for Member {
 
 #[derive(Debug,Json)]
 pub struct SyncList {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub elements: Vec<Member>,
 }
@@ -30,6 +32,7 @@ impl From<SyncList> for Member {
 
 #[derive(Debug,Json)]
 pub struct SyncObject {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub members: HashMap<String, Member>,
 }
@@ -42,6 +45,7 @@ impl From<SyncObject> for Member {
 
 #[derive(Debug,Json)]
 pub struct FieldEnum {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub value: String,
     pub enum_type: String,
@@ -143,9 +147,11 @@ impl From<()> for Member {
 
 #[derive(Default,Debug,Json)]
 pub struct Component {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub is_reference_only: bool,
     pub component_type: String,
+    #[json(skip = "Option::is_none")]
     pub members: Option<HashMap<String, Member>>,
 }
 
@@ -170,6 +176,7 @@ impl Component {
 
 #[derive(Json,Debug)]
 pub struct Slot {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
     pub is_reference_only: bool,
     pub parent: Reference,
@@ -180,7 +187,9 @@ pub struct Slot {
     pub is_persistent: FieldBool,
     pub name: FieldString,
     pub tag: FieldString,
+    #[json(skip = "Option::is_none")]
     pub components: Option<Vec<Component>>,
+    #[json(skip = "Option::is_none")]
     pub children: Option<Vec<Slot>>,
 }
 

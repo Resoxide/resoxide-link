@@ -12,14 +12,23 @@ pub struct GetSlot {
 
 #[derive(Debug,Default,Json)]
 pub struct AddSlotData {
+    #[json(skip = "Option::is_none")]
     pub id: Option<String>,
+    #[json(skip = "Option::is_none")]
     pub parent: Option<Reference>,
+    #[json(skip = "Option::is_none")]
     pub position: Option<FieldFloat3>,
+    #[json(skip = "Option::is_none")]
     pub rotation: Option<FieldFloatQ>,
+    #[json(skip = "Option::is_none")]
     pub scale: Option<FieldFloat3>,
+    #[json(skip = "Option::is_none")]
     pub is_active: Option<FieldBool>,
+    #[json(skip = "Option::is_none")]
     pub is_persistent: Option<FieldBool>,
+    #[json(skip = "Option::is_none")]
     pub name: Option<FieldString>,
+    #[json(skip = "Option::is_none")]
     pub tag: Option<FieldString>,
 }
 
@@ -48,13 +57,21 @@ pub struct AddSlot {
 #[derive(Debug,Default,Json)]
 pub struct UpdateSlotData {
     pub id: String,
+    #[json(skip = "Option::is_none")]
     pub parent: Option<Reference>,
+    #[json(skip = "Option::is_none")]
     pub position: Option<FieldFloat3>,
+    #[json(skip = "Option::is_none")]
     pub rotation: Option<FieldFloatQ>,
+    #[json(skip = "Option::is_none")]
     pub scale: Option<FieldFloat3>,
+    #[json(skip = "Option::is_none")]
     pub is_active: Option<FieldBool>,
+    #[json(skip = "Option::is_none")]
     pub is_persistent: Option<FieldBool>,
+    #[json(skip = "Option::is_none")]
     pub name: Option<FieldString>,
+    #[json(skip = "Option::is_none")]
     pub tag: Option<FieldString>,
 }
 
