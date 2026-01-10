@@ -108,6 +108,27 @@ pub struct RemoveComponent {
     pub component_id: String,
 }
 
+#[derive(Debug,Default,Json)]
+pub struct ImportTexture2DFile {
+    pub message_id: String,
+    pub file_path: String,
+}
+
+#[derive(Debug,Default,Json)]
+pub struct ImportTexture2DRawData {
+    pub message_id: String,
+    pub width: i32,
+    pub height: i32,
+    pub color_profile: String,
+}
+
+#[derive(Debug,Default,Json)]
+pub struct ImportTexture2DRawDataHDR {
+    pub message_id: String,
+    pub width: i32,
+    pub height: i32,
+}
+
 #[derive(Debug,Json)]
 pub enum Message {
     GetSlot(GetSlot),
@@ -118,4 +139,10 @@ pub enum Message {
     AddComponent(AddComponent),
     UpdateComponent(UpdateComponent),
     RemoveComponent(RemoveComponent),
+    #[json(rename = "importTexture2DFile")]
+    ImportTexture2DFile(ImportTexture2DFile),
+    #[json(rename = "importTexture2DRawData")]
+    ImportTexture2DRawData(ImportTexture2DRawData),
+    #[json(rename = "importTexture2DRawDataHDR")]
+    ImportTexture2DRawDataHDR(ImportTexture2DRawDataHDR),
 }
