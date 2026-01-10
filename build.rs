@@ -469,6 +469,7 @@ fn main() {
             List(SyncList),
             SyncObject(SyncObject),
             Enum(FieldEnum),
+            Empty,
             #variant_stream
         }
 

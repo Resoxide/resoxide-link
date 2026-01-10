@@ -1,5 +1,5 @@
 use resoxide_json::{Json, Token};
-use resoxide_link::data_model::{FieldFloat3, Float3, Member, Slot};
+use resoxide_link::data_model::{Float3, Member, Slot};
 use resoxide_link::messages::AddSlotData;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

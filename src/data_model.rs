@@ -135,6 +135,12 @@ impl From<&str> for Member {
     }
 }
 
+impl From<()> for Member {
+    fn from(_: ()) -> Self {
+        Self::Empty
+    }
+}
+
 #[derive(Default,Debug,Json)]
 pub struct Component {
     pub id: Option<String>,
