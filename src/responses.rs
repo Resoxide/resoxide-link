@@ -31,3 +31,18 @@ pub enum Response {
     SlotData(SlotData),
     ComponentData(ComponentData),
 }
+
+impl Response {
+    pub fn message_id(&self) -> &str {
+        match self {
+            Response::Response(ResponseData { source_message_id, .. }) => source_message_id,
+            Response::SlotData(SlotData { source_message_id, .. }) => source_message_id,
+            Response::ComponentData(ComponentData { source_message_id, .. }) => source_message_id,
+        }
+    }
+    
+    pub fn deserialize(s: &str) -> resoxide_json::Result<Response> {
+        let token = resoxide_json::Token::deserialize_str(s)?;
+        Self::from_token(&token)
+    }
+}

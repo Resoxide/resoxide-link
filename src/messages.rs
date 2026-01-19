@@ -163,3 +163,41 @@ pub enum Message {
     #[json(rename = "importTexture2DRawDataHDR")]
     ImportTexture2DRawDataHDR(ImportTexture2DRawDataHDR),
 }
+
+impl Message {
+    pub fn with_message_id(self, message_id: String) -> Message {
+        match self {
+            Message::GetSlot(msg) => Message::GetSlot(GetSlot { message_id, ..msg }),
+            Message::AddSlot(msg) => Message::AddSlot(AddSlot { message_id, ..msg }),
+            Message::UpdateSlot(msg) => Message::UpdateSlot(UpdateSlot { message_id, ..msg }),
+            Message::RemoveSlot(msg) => Message::RemoveSlot(RemoveSlot { message_id, ..msg }),
+            Message::GetComponent(msg) => Message::GetComponent(GetComponent { message_id, ..msg }),
+            Message::AddComponent(msg) => Message::AddComponent(AddComponent { message_id, ..msg }),
+            Message::UpdateComponent(msg) => Message::UpdateComponent(UpdateComponent { message_id, ..msg }),
+            Message::RemoveComponent(msg) => Message::RemoveComponent(RemoveComponent { message_id, ..msg }),
+            Message::ImportTexture2DFile(msg) => Message::ImportTexture2DFile(ImportTexture2DFile { message_id, ..msg }),
+            Message::ImportTexture2DRawData(msg ) => Message::ImportTexture2DRawData(ImportTexture2DRawData { message_id, ..msg }),
+            Message::ImportTexture2DRawDataHDR(msg  ) => Message::ImportTexture2DRawDataHDR(ImportTexture2DRawDataHDR { message_id, ..msg }),
+        }
+    }
+    
+    pub fn has_binary(&self) -> bool {
+        match self {
+            Message::GetSlot(_) => false,
+            Message::AddSlot(_) => false,
+            Message::UpdateSlot(_) => false,
+            Message::RemoveSlot(_) => false,
+            Message::GetComponent(_) => false,
+            Message::AddComponent(_) => false,
+            Message::UpdateComponent(_) => false,
+            Message::RemoveComponent(_) => false,
+            Message::ImportTexture2DFile(_) => false,
+            Message::ImportTexture2DRawData(_) => true,
+            Message::ImportTexture2DRawDataHDR(_) => true,
+        }
+    }
+    
+    pub fn serialize(&self) -> resoxide_json::Result<String> {
+        self.to_token()?.serialize()
+    }
+}
