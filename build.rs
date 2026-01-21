@@ -25,6 +25,7 @@ fn matrix(base_type: &str, ty: &str) -> TokenStream {
         let matrix_ty = syn::Ident::new(&matrix_name, Span::call_site());
         let mut fields = TokenStream::new();
         let mut identity = TokenStream::new();
+        let mut to_glam = TokenStream::new();
         let zero = zero_for(ty);
         let one = one_for(ty);
         for c in 0..dim {
@@ -40,6 +41,35 @@ fn matrix(base_type: &str, ty: &str) -> TokenStream {
                     quote! { #dim_ident: #zero, }
                 });
             }
+        }
+        if let Some(glam) = glam_type(ty, &*format!("Mat{dim}")) {
+            for r in 0..dim {
+                for c in 0..dim {
+                    let dim_name = format!("m{c}{r}");
+                    let dim_ident = syn::Ident::new(&dim_name, Span::call_site());
+                    to_glam.extend(quote! {
+                        m.#dim_ident,
+                    });
+                }
+            }
+            let glam_ty = syn::Ident::new(&glam, Span::call_site());
+            tokens.extend(quote! {
+                #[cfg(feature = "glam")]
+                impl From<::glam::#rust_ty::#glam_ty> for #matrix_ty {
+                    fn from(m: ::glam::#rust_ty::#glam_ty) -> Self {
+                        unsafe {
+                            ::core::mem::transmute(m.transpose().to_cols_array())
+                        }
+                    }
+                }
+
+                #[cfg(feature = "glam")]
+                impl From<#matrix_ty> for ::glam::#rust_ty::#glam_ty {
+                    fn from(m: #matrix_ty) -> Self {
+                        ::glam::#rust_ty::#glam_ty::from_cols_array(&[#to_glam])
+                    }
+                }
+            });
         }
         tokens.extend(quote! {
             #[derive(Clone,Copy,Default,Json,Debug,PartialEq)]
