@@ -19,7 +19,7 @@ futures-util = { version = "0.3.31", optional = true }
 [dependencies.resoxide-json]
 #path = "../resoxide-json"
 git = "https://github.com/Resoxide/resoxide-json.git"
-rev = "990e7cd"
+rev = "0fecc7938667399847195c2d7438707e77e32237"
 
 [dev-dependencies]
 tungstenite = { version = "0.28.0", features = ["handshake"] }

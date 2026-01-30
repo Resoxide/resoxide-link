@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
-use futures_util::{FutureExt, Sink, SinkExt};
+use futures_util::{FutureExt, SinkExt};
 use futures_util::stream::StreamExt;
 use futures_util::select;
 use resoxide_json::Json;
@@ -12,9 +12,14 @@ use tokio_tungstenite::tungstenite::{
 use crate::messages::Message;
 use crate::responses::Response;
 
+enum Handle {
+    Sync(std::thread::JoinHandle<Result<()>>),
+    Tokio(tokio::task::JoinHandle<Result<()>>,tokio::runtime::Handle),
+}
+
 pub struct Client {
     tx: tokio::sync::mpsc::Sender<Command>,
-    handle: Option<std::thread::JoinHandle<Result<()>>>,
+    handle: Option<Handle>,
     close_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
@@ -69,25 +74,19 @@ impl From<resoxide_json::Error> for Error {
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 impl Client {
-    fn connect_impl(request: tokio_tungstenite::tungstenite::handshake::client::Request, close_rx: tokio::sync::oneshot::Receiver<()>, rx: tokio::sync::mpsc::Receiver<Command>) -> Result<(std::thread::JoinHandle<Result<()>>,tokio::sync::oneshot::Receiver<()>)> {
-        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
-
-        let handle = std::thread::spawn(move || {
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()?;
-            runtime.block_on(async move {
-                let conf = WebSocketConfig::default();
-                let (websocket, _) = tokio_tungstenite::connect_async_with_config(request, Some(conf), true).await?;
-                let (mut sink, stream) = websocket.split();
-                let mut stream = stream.fuse();
-                let mut rx = tokio_stream::wrappers::ReceiverStream::new(rx).fuse();
-                let mut closer = close_rx.fuse();
-                let mut counter = 0usize;
-                let mut responders: HashMap<String, tokio::sync::oneshot::Sender<Response>> = HashMap::new();
-                let _ = resp_tx.send(());
-                loop {
-                    select! {
+    fn client_task(request: tokio_tungstenite::tungstenite::handshake::client::Request, close_rx: tokio::sync::oneshot::Receiver<()>, rx: tokio::sync::mpsc::Receiver<Command>, resp_tx: tokio::sync::oneshot::Sender<()>) -> impl Future<Output = Result<()>> {
+        async move {
+            let conf = WebSocketConfig::default();
+            let (websocket, _) = tokio_tungstenite::connect_async_with_config(request, Some(conf), true).await?;
+            let (mut sink, stream) = websocket.split();
+            let mut stream = stream.fuse();
+            let mut rx = tokio_stream::wrappers::ReceiverStream::new(rx).fuse();
+            let mut closer = close_rx.fuse();
+            let mut counter = 0usize;
+            let mut responders: HashMap<String, tokio::sync::oneshot::Sender<Response>> = HashMap::new();
+            let _ = resp_tx.send(());
+            loop {
+                select! {
                         msg = stream.next() => {
                             match msg {
                                 None => return Err(Error::Closed),
@@ -126,9 +125,27 @@ impl Client {
                             return Ok(closed?);
                         }
                     }
-                }
-            })
+            }
+        }
+    }
+
+    fn connect_impl(request: tokio_tungstenite::tungstenite::handshake::client::Request, close_rx: tokio::sync::oneshot::Receiver<()>, rx: tokio::sync::mpsc::Receiver<Command>) -> Result<(std::thread::JoinHandle<Result<()>>,tokio::sync::oneshot::Receiver<()>)> {
+        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+
+        let handle = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()?;
+            runtime.block_on(Self::client_task(request, close_rx, rx, resp_tx))
         });
+        Ok((handle, resp_rx))
+    }
+
+    fn connect_async(request: tokio_tungstenite::tungstenite::handshake::client::Request, close_rx: tokio::sync::oneshot::Receiver<()>, rx: tokio::sync::mpsc::Receiver<Command>) -> Result<(tokio::task::JoinHandle<Result<()>>,tokio::sync::oneshot::Receiver<()>)> {
+        let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+
+        let handle = tokio::spawn(Self::client_task(request, close_rx, rx, resp_tx));
+
         Ok((handle, resp_rx))
     }
 
@@ -136,12 +153,23 @@ impl Client {
         let request = format!("ws://localhost:{}", port).into_client_request()?;
         let (tx, rx) = tokio::sync::mpsc::channel::<Command>(8);
         let (close_tx, close_rx) = tokio::sync::oneshot::channel();
-        let (handle, resp_rx) = Self::connect_impl(request, close_rx, rx)?;
-        match resp_rx.await {
-            Ok(_) => Ok(Client { tx, handle: Some(handle), close_tx: Some(close_tx) }),
-            Err(_) => {
-                handle.join().unwrap()?;
-                Err(Error::Unknown)
+        if tokio::task::try_id().is_none() {
+            let (handle, resp_rx) = Self::connect_impl(request, close_rx, rx)?;
+            match resp_rx.await {
+                Ok(_) => Ok(Client { tx, handle: Some(Handle::Sync(handle)), close_tx: Some(close_tx) }),
+                Err(_) => {
+                    handle.join().unwrap()?;
+                    Err(Error::Unknown)
+                }
+            }
+        } else {
+            let (handle, resp_rx) = Self::connect_async(request, close_rx, rx)?;
+            match resp_rx.await {
+                Ok(_) => Ok(Client { tx, handle: Some(Handle::Tokio(handle, tokio::runtime::Handle::current())), close_tx: Some(close_tx) }),
+                Err(_) => {
+                    handle.await.unwrap()?;
+                    Err(Error::Unknown)
+                }
             }
         }
     }
@@ -152,7 +180,7 @@ impl Client {
         let (close_tx, close_rx) = tokio::sync::oneshot::channel();
         let (handle, resp_rx) = Self::connect_impl(request, close_rx, rx)?;
         match resp_rx.blocking_recv() {
-            Ok(_) => Ok(Client { tx, handle: Some(handle), close_tx: Some(close_tx) }),
+            Ok(_) => Ok(Client { tx, handle: Some(Handle::Sync(handle)), close_tx: Some(close_tx) }),
             Err(_) => {
                 handle.join().unwrap()?;
                 Err(Error::Unknown)
@@ -165,8 +193,14 @@ impl Client {
             let _ = close_tx.send(());
         }
         self.tx.closed().await;
-        if let Some(handle) = self.handle.take() {
-            handle.join().unwrap()?;
+        match self.handle.take() {
+            Some(Handle::Sync(handle)) => {
+                handle.join().unwrap()?;
+            }
+            Some(Handle::Tokio(handle, _)) => {
+                handle.await.unwrap()?;
+            }
+            None => {}
         }
         Ok(())
     }
@@ -175,17 +209,25 @@ impl Client {
         if let Some(close_tx) = self.close_tx.take() {
             let _ = close_tx.send(());
         }
-        if let Some(handle) = self.handle.take() {
-            handle.join().unwrap()?;
+        match self.handle.take() {
+            Some(Handle::Sync(handle)) => {
+                handle.join().unwrap()?;
+            }
+            Some(Handle::Tokio(handle, rt)) => {
+                rt.block_on(async move {
+                    handle.await.unwrap()
+                })?;
+            }
+            None => {}
         }
         Ok(())
     }
 
     pub fn is_active(&self) -> bool {
-        if let Some(handle) = &self.handle {
-            !handle.is_finished()
-        } else {
-            false
+        match &self.handle {
+            Some(Handle::Sync(handle)) => !handle.is_finished(),
+            Some(Handle::Tokio(handle, _)) => !handle.is_finished(),
+            None => false,
         }
     }
 
@@ -219,8 +261,14 @@ impl Drop for Client {
         if let Some(close_tx) = self.close_tx.take() {
             let _ = close_tx.send(());
         }
-        if let Some(handle) = self.handle.take() {
-            handle.join().unwrap().expect("Error dropping client without calling close()");
+        match self.handle.take() {
+            Some(Handle::Sync(handle)) => {
+                handle.join().unwrap().expect("Error during drop");
+            }
+            Some(Handle::Tokio(handle, rt)) => {
+                panic!("Dropping async client without closing");
+            }
+            None => {}
         }
     }
 }
